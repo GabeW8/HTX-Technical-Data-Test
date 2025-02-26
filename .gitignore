@@ -169,3 +169,19 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Ignore Hugging Face Transformers Cache (Pretrained Models)
+~/.cache/huggingface/
+huggingface/
+transformers_cache/
+
+# Ignore Large Audio Files (Optional, unless required)
+audio_samples/
+
+# Ignore CSV Output (Optional, unless tracking generated text)
+cv-valid-dev.csv
+
+# Ignore Logs and Debug Files
+logs/
+debug.log
+error.log
