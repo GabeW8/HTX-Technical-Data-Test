@@ -185,3 +185,10 @@ cv-valid-dev.csv
 logs/
 debug.log
 error.log
+
+# hugging model files
+models/
+models/*
+
+# lock files
+*.lock

@@ -1,20 +1,23 @@
-# Use official Python image
+# Use a lightweight Python image
 FROM python:3.11.1-slim
 
-# Set the working directory
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copy project files
-COPY . /app
-
-# Install dependencies
+# Copy only essential files
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create an uploads directory (optional)
-RUN mkdir -p /app/audio_samples
+# Now copy the main ASR API
+COPY asr_api.py /app/
 
-# Expose port 8001
+# Ensure storage for downloaded models (avoids redownloading on every build)
+ENV TRANSFORMERS_CACHE=/app/models
+RUN mkdir -p /app/models
+
+
+# Expose FastAPI port
 EXPOSE 8001
 
-# Run FastAPI with Uvicorn
+# Run FastAPI application
 CMD ["uvicorn", "asr_api:app", "--host", "0.0.0.0", "--port", "8001"]
