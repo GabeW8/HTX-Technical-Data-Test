@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ulimits:
+      memlock: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    restart: always
+
+  asr-api:
+    build: ../asr  
+    container_name: asr-api
+    ports:
+      - "8001:8001"
+    depends_on:
+      - elasticsearch
+    restart: always
+
+  search-ui:
+    image: docker.elastic.co/search-ui/search-ui:latest
+    container_name: search-ui
+    environment:
+      - REACT_APP_SEARCH_URL=http://elasticsearch:9200
+    ports:
+      - "3000:3000"
+    depends_on:
+      - elasticsearch
+    restart: always
+
+volumes:
+  esdata:
+    driver: local
