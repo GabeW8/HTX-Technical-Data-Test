@@ -21,7 +21,7 @@ def bulk_index_data():
             data = json.dumps({
                 "generated_text": row["generated_text"],
                 "duration": float(row["duration"]),
-                "age": int(row["age"]),
+                "age": int(row["age"]) if row["age"].isdigit() else 0,
                 "gender": row["gender"],
                 "accent": row["accent"]
             })

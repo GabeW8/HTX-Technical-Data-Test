@@ -12,18 +12,20 @@ import "@elastic/react-search-ui-views/lib/styles/styles.css";
 
 const connector = new ElasticsearchAPIConnector({
   host: "http://localhost:9200",
-  index: "cv-transcriptions"
+  index: "cv-transcriptions",
+  queryParameters: {
+    "source_content_type": "application/json",
+    "source": ["generated_text", "duration", "age", "gender", "accent"]
+  }
 });
 
 const config = {
   apiConnector: connector,
   searchQuery: {
+    query: "",  // Ensures an empty query fetches all results
+    disjunctiveFacets: ["gender", "age", "accent"], // Enable multi-value filters
     search_fields: {
-      generated_text: {},
-      duration: {},
-      age: {},
-      gender: {},
-      accent: {}
+      generated_text: { type: "text" }, // Explicitly define as text
     },
     result_fields: {
       generated_text: { raw: {} },
@@ -46,6 +48,7 @@ const config = {
     }
   }
 };
+
 
 export default function App() {
   return (
