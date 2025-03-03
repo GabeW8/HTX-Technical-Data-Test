@@ -8,68 +8,68 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables
+load_dotenv()  # load environment variables
 
 app = FastAPI()
 
-# Load the ASR model
+# load the ASR model from env variable, defaulting if not provided
 model_name = os.getenv("MODEL_NAME", "facebook/wav2vec2-large-960h")
 processor = Wav2Vec2Processor.from_pretrained(model_name)
 model = Wav2Vec2ForCTC.from_pretrained(model_name)
 
-# Maximum allowed file size (10MB)
+# maximum allowed file size (10MB)
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
 @app.get("/ping")
 def ping():
-    """Health check endpoint"""
+    """health check endpoint"""
     return {"message": "pong"}
 
 @app.post("/asr")
 async def transcribe_audio(file: UploadFile = File(...)):
-    """Process an uploaded MP3 file and return its transcription and duration."""
+    """process an uploaded audio file and return its transcription and duration"""
     try:
-        # Ensure file is an MP3
-        if not file.filename.endswith(".mp3"):
-            raise HTTPException(status_code=400, detail="Only MP3 files are supported.")
+        # read entire file and check its size
+        audio_bytes = await file.read()
+        if len(audio_bytes) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail="File too large. Max size is 10MB.")
 
-        # Save uploaded file temporarily
-        temp_filename = f"temp_{file.filename}"
-        with open(temp_filename, "wb") as temp_file:
-            temp_file.write(await file.read())
+        # load audio data using soundfile from an in-memory bytes stream
+        with io.BytesIO(audio_bytes) as audio_buffer:
+            audio_data, sample_rate = sf.read(audio_buffer)
 
-        # Read the saved file
-        audio_data, sample_rate = sf.read(temp_filename)
-
-        # Convert stereo to mono if necessary
+        # if stereo, convert to mono by averaging channels
         if audio_data.ndim > 1:
             audio_data = np.mean(audio_data, axis=1)
 
-        # Resample audio to 16kHz if needed
+        # resample audio to 16kHz if needed
         if sample_rate != 16000:
             audio_data = librosa.resample(audio_data, orig_sr=sample_rate, target_sr=16000)
             sample_rate = 16000
 
-        # Calculate duration
+        # calculate duration in seconds
         duration = round(len(audio_data) / sample_rate, 2)
 
-        # Prepare input and run inference
+        # prepare input and run inference
         input_values = processor(audio_data, return_tensors="pt", sampling_rate=16000).input_values
         logits = model(input_values).logits
         predicted_ids = torch.argmax(logits, dim=-1)
         transcription = processor.batch_decode(predicted_ids)[0]
 
-        # Delete processed file
-        os.remove(temp_filename)
-
-        return {"transcription": transcription, "duration": str(duration)}
-
+        return {
+            "transcription": transcription,
+            "duration": str(duration)
+        }
     except Exception as e:
-        # Delete file if it was saved before an error occurred
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
+        # return a generic error message; in production consider structured logging
         return {"error": f"An error occurred: {str(e)}"}
 
+# optional testing code; executed only if this module is run directly
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    # for quick testing of the API endpoints (not part of production)
+    print("Now testing the API with /ping endpoint...")
+    # simple test; in practice use an external tool like curl or Postman
+    from fastapi.testclient import TestClient
+    client = TestClient(app)
+    response = client.get("/ping")
+    print(response.json())
